@@ -1,0 +1,26 @@
+<svg width="960" height="640" viewBox="0 0 960 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="960" height="640" fill="#EAF6FF"/>
+  <circle cx="806" cy="94" r="48" fill="#FFD166"/>
+  <path d="M0 348C146 302 315 322 444 358C577 396 738 408 960 338V640H0V348Z" fill="#A8D6B2"/>
+  <path d="M70 502H890" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" opacity="0.9"/>
+  <path d="M96 555H864" stroke="#FFFFFF" stroke-width="9" stroke-linecap="round" opacity="0.75"/>
+  <path d="M132 412H828" stroke="#D08B2D" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="262" cy="288" r="30" fill="#17324D"/>
+  <path d="M262 318L236 388L200 434" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M262 318L316 370" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M246 350L314 328" stroke="#B9573B" stroke-width="13" stroke-linecap="round"/>
+  <path d="M236 388L292 438" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="488" cy="286" r="30" fill="#17324D"/>
+  <path d="M488 316L488 396L446 448" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M488 396L548 448" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M452 346H532" stroke="#2D6A4F" stroke-width="13" stroke-linecap="round"/>
+  <circle cx="688" cy="288" r="30" fill="#17324D"/>
+  <path d="M688 318L716 390L760 432" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M688 318L632 370" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M710 350L644 328" stroke="#D08B2D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M716 390L656 440" stroke="#17324D" stroke-width="13" stroke-linecap="round"/>
+  <path d="M108 162H308V246H108V162Z" fill="#FFF8E8" stroke="#17324D" stroke-width="8"/>
+  <path d="M134 204H282" stroke="#2D6A4F" stroke-width="12" stroke-linecap="round"/>
+  <path d="M760 162H820V346" stroke="#17324D" stroke-width="10" stroke-linecap="round"/>
+  <path d="M820 168H892V234H820V168Z" fill="#B9573B" stroke="#17324D" stroke-width="8"/>
+</svg>
