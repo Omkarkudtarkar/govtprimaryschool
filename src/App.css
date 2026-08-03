@@ -1186,17 +1186,12 @@ h3 {
   font-weight: 800;
 }
 
-.photo-credit-line {
+.copyright-line {
   max-width: 560px;
   color: rgba(255, 255, 255, 0.72);
   font-size: 0.72rem;
   line-height: 1.35;
   text-align: right;
-}
-
-.photo-credit-line a {
-  color: #ffffff;
-  font-weight: 800;
 }
 
 @keyframes pageFadeIn {
@@ -1500,7 +1495,7 @@ h3 {
     flex-direction: column;
   }
 
-  .photo-credit-line {
+  .copyright-line {
     max-width: none;
     text-align: left;
   }

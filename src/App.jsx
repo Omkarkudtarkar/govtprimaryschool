@@ -24,9 +24,10 @@ import {
   Upload,
   UsersRound,
 } from 'lucide-react'
-import aksharaClassroomImage from './assets/akshara-classroom.jpg'
-import aksharaStudentsImage from './assets/akshara-students.jpg'
-import aksharaTeaShopLibraryImage from './assets/akshara-tea-shop-library.jpg'
+import campusImage from './assets/school-campus.svg'
+import assemblyImage from './assets/government-school-assembly.svg'
+import classroomImage from './assets/government-school-classroom.svg'
+import sportsImage from './assets/government-school-sports.svg'
 import './App.css'
 
 const ADMIN_USERNAME = 'admin'
@@ -184,22 +185,22 @@ const stats = [
 
 const defaultPhotos = [
   {
-    id: 'default-akshara-classroom',
-    title: 'Rural Classroom Visit',
-    caption: 'Students and visitors during a school visit in rural Karnataka.',
-    src: aksharaClassroomImage,
+    id: 'default-assembly',
+    title: 'Morning Assembly',
+    caption: 'Students gather in front of the government school building.',
+    src: assemblyImage,
   },
   {
-    id: 'default-akshara-students',
+    id: 'default-classroom',
     title: 'Classroom Learning',
-    caption: 'Students working at the blackboard during a classroom activity.',
-    src: aksharaStudentsImage,
+    caption: 'Activity-based learning with reading, writing, and practice.',
+    src: classroomImage,
   },
   {
-    id: 'default-akshara-tea-shop-library',
-    title: 'Community Reading Space',
-    caption: 'A tea shop library supporting reading in the local community.',
-    src: aksharaTeaShopLibraryImage,
+    id: 'default-sports',
+    title: 'Sports Ground',
+    caption: 'Outdoor games, drills, and student participation.',
+    src: sportsImage,
   },
 ]
 
@@ -357,7 +358,7 @@ function HomePage({ photos }) {
             <GraduationCap size={32} aria-hidden="true" />
             <span>Govt. School</span>
           </div>
-          <img src={aksharaClassroomImage} alt="Students in a rural Karnataka classroom" />
+          <img src={campusImage} alt="Illustration of a school building with students and trees" />
         </div>
       </section>
 
@@ -1278,24 +1279,7 @@ function Footer() {
         <p>{schoolProfile.name}</p>
         <span>{schoolProfile.tagline}</span>
       </div>
-      <small className="photo-credit-line">
-        Photos:
-        {' '}
-        <a
-          href="https://akshara.org.in/beautiful-warm-resourceful-my-first-visit-to-a-school-in-rural-india/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          Akshara Foundation
-        </a>
-        {' '}
-        from the article "My first visit to a government school in rural India",
-        {' '}
-        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer">
-          CC BY 4.0
-        </a>
-        .
-      </small>
+      <small className="copyright-line">Copyright (c) 2026 Omkar Kudtarkar. All rights reserved.</small>
     </footer>
   )
 }
