@@ -17,12 +17,14 @@ import {
   Image as ImageIcon,
   LogIn,
   Mail,
+  Menu,
   MapPin,
   Phone,
   Send,
   Trash2,
   Upload,
   UsersRound,
+  X,
 } from 'lucide-react'
 import campusImage from './assets/school-campus.svg'
 import assemblyImage from './assets/government-school-assembly.svg'
@@ -261,7 +263,13 @@ function LoadingScreen() {
 
 function Header() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [logoTapCount, setLogoTapCount] = useState(0)
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
+
+  useEffect(() => {
+    setIsMenuOpen(false)
+  }, [location.pathname])
 
   function handleLogoTap(event) {
     const nextCount = logoTapCount + 1
@@ -296,7 +304,23 @@ function Header() {
         </span>
       </Link>
 
-      <nav className="nav-links" aria-label="Main navigation">
+      <button
+        className="mobile-menu-toggle"
+        type="button"
+        aria-controls="main-navigation"
+        aria-expanded={isMenuOpen}
+        aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+        onClick={() => setIsMenuOpen((currentValue) => !currentValue)}
+      >
+        {isMenuOpen ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
+        <span>Menu</span>
+      </button>
+
+      <nav
+        id="main-navigation"
+        className={`nav-links${isMenuOpen ? ' is-open' : ''}`}
+        aria-label="Main navigation"
+      >
         <NavLink to="/" end>
           Home
         </NavLink>
