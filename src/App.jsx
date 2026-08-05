@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   BrowserRouter,
   Link,
@@ -8,10 +8,12 @@ import {
   Routes,
   useLocation,
   useNavigate,
+  useSearchParams,
 } from 'react-router-dom'
 import {
   BookOpen,
   CalendarDays,
+  ChevronLeft,
   ChevronRight,
   GraduationCap,
   Image as ImageIcon,
@@ -38,6 +40,8 @@ const EVENTS_STORAGE_KEY = 'jagalbet-school-events'
 const PHOTOS_STORAGE_KEY = 'jagalbet-school-photos'
 const FACULTY_STORAGE_KEY = 'jagalbet-school-faculty'
 const ADMIN_STORAGE_KEY = 'jagalbet-school-admin'
+const ANNUAL_DAY_ALBUM_ID = 'annual-day'
+const DEFAULT_PHOTO_ALBUM_ID = 'school-life'
 
 const schoolProfile = {
   name: 'Govt. Higher Primary School, Jagalbet',
@@ -45,10 +49,10 @@ const schoolProfile = {
   place: 'Jagalbet',
   tagline: 'Empowering Young Minds | Quality Education for Every Child',
   udise: '29341105201',
-  location: 'Jagalbet, Joida Taluk, Uttara Kannada',
+  location: 'Jagalbet, Joida Taluka, Uttara Kannada',
   schoolType: 'Government Co-ed',
   medium: 'Kannada medium with English language learning support',
-  address: 'Govt. Higher Primary School, Jagalbet, Joida Taluk, Uttara Kannada, Karnataka',
+  address: 'Govt. Higher Primary School, Jagalbet, Joida Taluka, Uttara Kannada, Karnataka',
 }
 
 const defaultFaculty = [
@@ -181,27 +185,164 @@ const admissionDocuments = [
 
 const stats = [
   { value: schoolProfile.udise, label: 'UDISE Code' },
-  { value: 'Joida Taluk', label: 'Jagalbet, Uttara Kannada' },
+  { value: 'Joida Taluka', label: 'Jagalbet, Uttara Kannada' },
   { value: schoolProfile.schoolType, label: 'School Type' },
 ]
+
+const photoAlbums = [
+  {
+    id: ANNUAL_DAY_ALBUM_ID,
+    title: 'Annual Day',
+    description: 'Student performances, welcome programs, prize moments, and cultural activities.',
+    emptyMessage: 'Annual Day photos will appear here after they are added.',
+  },
+  {
+    id: 'yoga-day',
+    title: 'Yoga Day',
+    description: 'Yoga practice, wellness activities, and student participation.',
+    emptyMessage: 'Yoga Day photos will appear here after they are added.',
+  },
+  {
+    id: 'teacher-training-program',
+    title: 'Teacher Training Program',
+    description: 'Teacher learning sessions, workshops, and professional development activities.',
+    emptyMessage: 'Teacher Training Program photos will appear here after they are added.',
+  },
+  {
+    id: 'womens-day-celebration',
+    title: "Women's Day Celebration",
+    description: "Women's Day programs, recognition moments, and school celebrations.",
+    emptyMessage: "Women's Day Celebration photos will appear here after they are added.",
+  },
+  {
+    id: 'eco-club',
+    title: 'Eco Club',
+    description: 'Environment awareness, nature activities, and student eco club programs.',
+    emptyMessage: 'Eco Club photos will appear here after they are added.',
+  },
+  {
+    id: 'kalika-habba',
+    title: 'Kalika Habba',
+    description: 'Learning festival activities, student work, games, and creative programs.',
+    emptyMessage: 'Kalika Habba photos will appear here after they are added.',
+  },
+  {
+    id: 'bagless-day',
+    title: 'Bagless Day',
+    description: 'Activity-based learning, practical sessions, and joyful school experiences.',
+    emptyMessage: 'Bagless Day photos will appear here after they are added.',
+  },
+  {
+    id: DEFAULT_PHOTO_ALBUM_ID,
+    title: 'School Life',
+    description: 'Classroom learning, assembly, sports, and daily school activities.',
+    emptyMessage: 'School life photos will appear here after they are added.',
+  },
+]
+
+const galleryPhotoModules = import.meta.glob('./assets/gallery/*/*.{jpg,jpeg,png,webp}', {
+  eager: true,
+  import: 'default',
+})
+
+const homeSlideModules = import.meta.glob('./assets/home-slides/*.{jpg,jpeg,png,webp}', {
+  eager: true,
+  import: 'default',
+})
+
+const homeSlides = Object.entries(homeSlideModules)
+  .sort(([firstPath], [secondPath]) => firstPath.localeCompare(secondPath))
+  .map(([, src], index) => ({
+    id: `home-slide-${index + 1}`,
+    title: `School Activity ${index + 1}`,
+    src,
+  }))
+
+const ignoredGalleryAlbumIds = new Set(['price-distribution', 'prize-distribution'])
+
+function formatFolderTitle(folderName) {
+  return folderName
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+function normalizeAlbumFolderName(folderName) {
+  const normalizedFolderName = decodeURIComponent(folderName)
+    .toLowerCase()
+    .replace(/'/g, '')
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+
+  const albumAliases = {
+    annual: ANNUAL_DAY_ALBUM_ID,
+    'annual-day': ANNUAL_DAY_ALBUM_ID,
+    'bagless-day': 'bagless-day',
+    'eco-club': 'eco-club',
+    'kalika-habba': 'kalika-habba',
+    'school-life': DEFAULT_PHOTO_ALBUM_ID,
+    'teacher-training': 'teacher-training-program',
+    'teacher-training-program': 'teacher-training-program',
+    'teachers-training-program': 'teacher-training-program',
+    'womens-day': 'womens-day-celebration',
+    'womens-day-celebration': 'womens-day-celebration',
+    'yoga-day': 'yoga-day',
+  }
+
+  return albumAliases[normalizedFolderName] || normalizedFolderName || DEFAULT_PHOTO_ALBUM_ID
+}
+
+const galleryAssetPhotoCounts = {}
+const galleryAssetPhotos = Object.entries(galleryPhotoModules)
+  .sort(([firstPath], [secondPath]) => firstPath.localeCompare(secondPath))
+  .flatMap(([path, src]) => {
+    const folderName = path.split('/').at(-2) || DEFAULT_PHOTO_ALBUM_ID
+    const albumId = normalizeAlbumFolderName(folderName)
+
+    if (ignoredGalleryAlbumIds.has(albumId)) {
+      return []
+    }
+
+    const configuredAlbum = photoAlbums.find((album) => album.id === albumId)
+    const albumTitle = configuredAlbum?.title || formatFolderTitle(folderName)
+    const nextIndex = (galleryAssetPhotoCounts[albumId] || 0) + 1
+    galleryAssetPhotoCounts[albumId] = nextIndex
+
+    return [{
+      id: `${albumId}-${nextIndex}`,
+      title: `${albumTitle} ${nextIndex}`,
+      caption: `${albumTitle} photo from Govt. Higher Primary School, Jagalbet.`,
+      albumId,
+      albumTitle,
+      src,
+    }]
+  })
 
 const defaultPhotos = [
   {
     id: 'default-assembly',
     title: 'Morning Assembly',
     caption: 'Students gather in front of the government school building.',
+    albumId: DEFAULT_PHOTO_ALBUM_ID,
+    albumTitle: 'School Life',
     src: assemblyImage,
   },
   {
     id: 'default-classroom',
     title: 'Classroom Learning',
     caption: 'Activity-based learning with reading, writing, and practice.',
+    albumId: DEFAULT_PHOTO_ALBUM_ID,
+    albumTitle: 'School Life',
     src: classroomImage,
   },
   {
     id: 'default-sports',
     title: 'Sports Ground',
     caption: 'Outdoor games, drills, and student participation.',
+    albumId: DEFAULT_PHOTO_ALBUM_ID,
+    albumTitle: 'School Life',
     src: sportsImage,
   },
 ]
@@ -232,6 +373,47 @@ function readFileAsDataUrl(file) {
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
+}
+
+function getAlbumById(albumId) {
+  return photoAlbums.find((album) => album.id === albumId) || photoAlbums.at(-1)
+}
+
+function buildGalleryAlbums(photos) {
+  const albumsById = new Map(
+    photoAlbums.map((album) => [
+      album.id,
+      {
+        ...album,
+        photos: [],
+      },
+    ]),
+  )
+
+  photos.forEach((photo) => {
+    const albumId = photo.albumId || DEFAULT_PHOTO_ALBUM_ID
+    const knownAlbum = getAlbumById(albumId)
+
+    if (!albumsById.has(albumId)) {
+      albumsById.set(albumId, {
+        id: albumId,
+        title: photo.albumTitle || knownAlbum.title,
+        description: knownAlbum.description,
+        emptyMessage: knownAlbum.emptyMessage,
+        photos: [],
+      })
+    }
+
+    albumsById.get(albumId).photos.push({
+      ...photo,
+      albumId,
+      albumTitle: photo.albumTitle || knownAlbum.title,
+    })
+  })
+
+  return Array.from(albumsById.values()).filter((album) =>
+    photoAlbums.some((configuredAlbum) => configuredAlbum.id === album.id) || album.photos.length > 0,
+  )
 }
 
 function ScrollToTop() {
@@ -336,8 +518,224 @@ function Header() {
   )
 }
 
+function HomeAlbumCard({ album, index }) {
+  const slidePhotos = album.photos.slice(0, 6)
+  const [activePhotoIndex, setActivePhotoIndex] = useState(0)
+
+  useEffect(() => {
+    setActivePhotoIndex(0)
+  }, [album.id])
+
+  useEffect(() => {
+    if (slidePhotos.length <= 1) {
+      return undefined
+    }
+
+    const firstMove = window.setTimeout(() => {
+      setActivePhotoIndex((currentIndex) => (currentIndex + 1) % slidePhotos.length)
+    }, 900 + index * 260)
+
+    const slideTimer = window.setInterval(() => {
+      setActivePhotoIndex((currentIndex) => (currentIndex + 1) % slidePhotos.length)
+    }, 3300 + index * 180)
+
+    return () => {
+      window.clearTimeout(firstMove)
+      window.clearInterval(slideTimer)
+    }
+  }, [album.id, index, slidePhotos.length])
+
+  return (
+    <Link className="album-card home-album-card" to={`/gallery?album=${album.id}`}>
+      {slidePhotos.length > 0 ? (
+        <span className="album-card-media" aria-hidden="true">
+          <span
+            className="album-card-track"
+            style={{ '--album-slide-offset': `${activePhotoIndex * -100}%` }}
+          >
+            {slidePhotos.map((photo) => (
+              <img src={photo.src} alt="" key={photo.id} />
+            ))}
+          </span>
+          {slidePhotos.length > 1 && (
+            <span className="album-slide-dots" aria-hidden="true">
+              {slidePhotos.map((photo, photoIndex) => (
+                <span
+                  className={photoIndex === activePhotoIndex ? 'is-active' : ''}
+                  key={`${photo.id}-dot`}
+                ></span>
+              ))}
+            </span>
+          )}
+        </span>
+      ) : (
+        <span className="album-placeholder" aria-hidden="true">
+          <ImageIcon size={34} />
+        </span>
+      )}
+      <span className="album-card-body">
+        <strong>{album.title}</strong>
+        <span>{album.description}</span>
+        <small>{album.photos.length} photos</small>
+      </span>
+    </Link>
+  )
+}
+
+function SketchBoard() {
+  const canvasRef = useRef(null)
+  const isDrawingRef = useRef(false)
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) {
+      return undefined
+    }
+
+    function resizeCanvas() {
+      const { width, height } = canvas.getBoundingClientRect()
+      const pixelRatio = window.devicePixelRatio || 1
+      canvas.width = Math.max(1, Math.floor(width * pixelRatio))
+      canvas.height = Math.max(1, Math.floor(height * pixelRatio))
+
+      const context = canvas.getContext('2d')
+      context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0)
+      context.lineWidth = 4
+      context.lineCap = 'round'
+      context.lineJoin = 'round'
+      context.strokeStyle = '#38bdf8'
+    }
+
+    resizeCanvas()
+
+    const resizeObserver =
+      'ResizeObserver' in window ? new ResizeObserver(resizeCanvas) : null
+
+    if (resizeObserver) {
+      resizeObserver.observe(canvas)
+    } else {
+      window.addEventListener('resize', resizeCanvas)
+    }
+
+    return () => {
+      resizeObserver?.disconnect()
+      window.removeEventListener('resize', resizeCanvas)
+    }
+  }, [])
+
+  function getCanvasPoint(event) {
+    const canvas = canvasRef.current
+    const rect = canvas.getBoundingClientRect()
+    return {
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+    }
+  }
+
+  function startSketch(event) {
+    event.preventDefault()
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+    const point = getCanvasPoint(event)
+
+    canvas.setPointerCapture(event.pointerId)
+    isDrawingRef.current = true
+    context.beginPath()
+    context.moveTo(point.x, point.y)
+  }
+
+  function drawSketch(event) {
+    if (!isDrawingRef.current) {
+      return
+    }
+
+    event.preventDefault()
+    const context = canvasRef.current.getContext('2d')
+    const point = getCanvasPoint(event)
+
+    context.lineTo(point.x, point.y)
+    context.stroke()
+  }
+
+  function stopSketch(event) {
+    if (!isDrawingRef.current) {
+      return
+    }
+
+    const canvas = canvasRef.current
+    isDrawingRef.current = false
+
+    if (canvas.hasPointerCapture(event.pointerId)) {
+      canvas.releasePointerCapture(event.pointerId)
+    }
+  }
+
+  function clearSketch() {
+    const canvas = canvasRef.current
+    const context = canvas.getContext('2d')
+    const { width, height } = canvas.getBoundingClientRect()
+
+    context.clearRect(0, 0, width, height)
+  }
+
+  return (
+    <div className="sketch-board">
+      <div className="sketch-board-header">
+        <strong>
+          <span className="sketch-pencil-icon" aria-hidden="true"></span>
+          Creative Sketch Board
+        </strong>
+        <button type="button" onClick={clearSketch}>
+          Clear
+        </button>
+      </div>
+      <div className="sketch-canvas-wrap">
+        <canvas
+          ref={canvasRef}
+          className="sketch-canvas"
+          aria-label="Creative sketch board"
+          onPointerDown={startSketch}
+          onPointerMove={drawSketch}
+          onPointerUp={stopSketch}
+          onPointerCancel={stopSketch}
+        ></canvas>
+      </div>
+    </div>
+  )
+}
+
 function HomePage({ photos }) {
-  const latestPhotos = photos.slice(0, 3)
+  const galleryAlbums = useMemo(() => buildGalleryAlbums(photos), [photos])
+  const homeGalleryAlbums = galleryAlbums.slice(0, 3)
+  const [activeSlideIndex, setActiveSlideIndex] = useState(0)
+  const heroSlides =
+    homeSlides.length > 0
+      ? homeSlides
+      : [
+          {
+            id: 'default-campus-slide',
+            title: 'School campus',
+            src: campusImage,
+          },
+        ]
+
+  useEffect(() => {
+    if (heroSlides.length <= 1) {
+      return undefined
+    }
+
+    const slideTimer = window.setInterval(() => {
+      setActiveSlideIndex((currentIndex) => (currentIndex + 1) % heroSlides.length)
+    }, 3600)
+
+    return () => window.clearInterval(slideTimer)
+  }, [heroSlides.length])
+
+  function moveHeroSlide(direction) {
+    setActiveSlideIndex(
+      (currentIndex) => (currentIndex + direction + heroSlides.length) % heroSlides.length,
+    )
+  }
 
   return (
     <>
@@ -375,14 +773,56 @@ function HomePage({ photos }) {
               View Events
             </Link>
           </div>
+          <SketchBoard />
         </div>
 
-        <div className="hero-media" aria-label="School campus illustration">
+        <div className="hero-media" aria-label="School activity photos">
           <div className="crest-badge" aria-label="Official school crest">
             <GraduationCap size={32} aria-hidden="true" />
             <span>Govt. School</span>
           </div>
-          <img src={campusImage} alt="Illustration of a school building with students and trees" />
+          <div className="hero-slideshow">
+            {heroSlides.map((slide, index) => (
+              <img
+                className={index === activeSlideIndex ? 'is-active' : ''}
+                src={slide.src}
+                alt={slide.title}
+                key={slide.id}
+              />
+            ))}
+            {heroSlides.length > 1 && (
+              <>
+                <button
+                  type="button"
+                  className="hero-slide-control hero-slide-prev"
+                  aria-label="Previous home photo"
+                  onClick={() => moveHeroSlide(-1)}
+                >
+                  <ChevronLeft size={20} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="hero-slide-control hero-slide-next"
+                  aria-label="Next home photo"
+                  onClick={() => moveHeroSlide(1)}
+                >
+                  <ChevronRight size={20} aria-hidden="true" />
+                </button>
+                <div className="hero-slide-dots" aria-label="Home photo slides">
+                  {heroSlides.map((slide, index) => (
+                    <button
+                      type="button"
+                      className={index === activeSlideIndex ? 'is-active' : ''}
+                      aria-label={`Show ${slide.title}`}
+                      aria-current={index === activeSlideIndex ? 'true' : undefined}
+                      key={slide.id}
+                      onClick={() => setActiveSlideIndex(index)}
+                    ></button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </section>
 
@@ -415,26 +855,20 @@ function HomePage({ photos }) {
         </div>
       </section>
 
-      {latestPhotos.length > 0 && (
+      {homeGalleryAlbums.length > 0 && (
         <section className="section-block latest-gallery">
           <div className="section-heading">
-            <p className="eyebrow">Latest Photos</p>
-            <h2>Recent School Gallery</h2>
-            <p>Photos uploaded by the admin appear here and on the Gallery page.</p>
+            <p className="eyebrow">Gallery</p>
+            <h2>School Photo Albums</h2>
+            <p>Open event albums including Annual Day, Yoga Day, Eco Club, Kalika Habba, and more.</p>
             <Link className="section-link-button" to="/gallery">
               <ImageIcon size={18} aria-hidden="true" />
-              Open Gallery
+              View All Albums
             </Link>
           </div>
-          <div className="gallery-grid compact-gallery">
-            {latestPhotos.map((photo) => (
-              <article className="gallery-card" key={photo.id}>
-                <img src={photo.src} alt={photo.title} />
-                <div>
-                  <h3>{photo.title}</h3>
-                  <p>{photo.caption}</p>
-                </div>
-              </article>
+          <div className="album-grid home-album-grid">
+            {homeGalleryAlbums.map((album, index) => (
+              <HomeAlbumCard album={album} index={index} key={album.id} />
             ))}
           </div>
         </section>
@@ -543,24 +977,122 @@ function EventsPage({ events }) {
 }
 
 function GalleryPage({ photos }) {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const albumParam = searchParams.get('album')
+  const [selectedAlbumId, setSelectedAlbumId] = useState(albumParam)
+  const [activePhotoIndex, setActivePhotoIndex] = useState(null)
+  const galleryAlbums = useMemo(() => buildGalleryAlbums(photos), [photos])
+  const selectedAlbum = galleryAlbums.find((album) => album.id === selectedAlbumId)
+  const activePhoto =
+    selectedAlbum && activePhotoIndex !== null ? selectedAlbum.photos[activePhotoIndex] : null
+
+  useEffect(() => {
+    if (albumParam && galleryAlbums.some((album) => album.id === albumParam)) {
+      setSelectedAlbumId(albumParam)
+      setActivePhotoIndex(0)
+      return
+    }
+
+    if (!albumParam) {
+      setSelectedAlbumId(null)
+      setActivePhotoIndex(null)
+    }
+  }, [albumParam, galleryAlbums])
+
+  useEffect(() => {
+    if (!selectedAlbum) {
+      return undefined
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setActivePhotoIndex(null)
+        setSelectedAlbumId(null)
+        if (albumParam) {
+          setSearchParams({})
+        }
+      }
+
+      if (event.key === 'ArrowLeft' && activePhoto) {
+        setActivePhotoIndex((currentIndex) =>
+          currentIndex === null
+            ? 0
+            : (currentIndex - 1 + selectedAlbum.photos.length) % selectedAlbum.photos.length,
+        )
+      }
+
+      if (event.key === 'ArrowRight' && activePhoto) {
+        setActivePhotoIndex((currentIndex) =>
+          currentIndex === null ? 0 : (currentIndex + 1) % selectedAlbum.photos.length,
+        )
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [activePhoto, albumParam, selectedAlbum, setSearchParams])
+
+  function openAlbum(albumId) {
+    const album = galleryAlbums.find((galleryAlbum) => galleryAlbum.id === albumId)
+
+    if (!album || album.photos.length === 0) {
+      return
+    }
+
+    setSelectedAlbumId(albumId)
+    setActivePhotoIndex(0)
+  }
+
+  function closeAlbum() {
+    setActivePhotoIndex(null)
+    setSelectedAlbumId(null)
+    if (albumParam) {
+      setSearchParams({})
+    }
+  }
+
+  function movePhoto(direction) {
+    if (!selectedAlbum || selectedAlbum.photos.length === 0) {
+      return
+    }
+
+    setActivePhotoIndex((currentIndex) =>
+      currentIndex === null
+        ? 0
+        : (currentIndex + direction + selectedAlbum.photos.length) % selectedAlbum.photos.length,
+    )
+  }
+
   return (
     <section className="section-block section-page gallery-section">
       <div className="page-hero">
         <p className="eyebrow">Gallery</p>
-        <h1>School Photos</h1>
-        <p>Photos uploaded by the admin will be displayed here for visitors.</p>
+        <h1>School Photo Albums</h1>
+        <p>Select an album to view photos from school events and activities.</p>
       </div>
 
-      {photos.length > 0 ? (
-        <div className="gallery-grid">
-          {photos.map((photo) => (
-            <article className="gallery-card" key={photo.id}>
-              <img src={photo.src} alt={photo.title} />
-              <div>
-                <h3>{photo.title}</h3>
-                <p>{photo.caption}</p>
-              </div>
-            </article>
+      {galleryAlbums.length > 0 ? (
+        <div className="album-grid">
+          {galleryAlbums.map((album) => (
+            <button
+              className={`album-card${album.photos.length === 0 ? ' is-empty' : ''}`}
+              key={album.id}
+              type="button"
+              onClick={() => openAlbum(album.id)}
+            >
+              {album.photos[0] ? (
+                <img src={album.photos[0].src} alt="" aria-hidden="true" />
+              ) : (
+                <span className="album-placeholder" aria-hidden="true">
+                  <ImageIcon size={34} />
+                </span>
+              )}
+              <span className="album-card-body">
+                <strong>{album.title}</strong>
+                <span>{album.description}</span>
+                <small>{album.photos.length} photos</small>
+              </span>
+            </button>
           ))}
         </div>
       ) : (
@@ -571,6 +1103,46 @@ function GalleryPage({ photos }) {
           <Link className="secondary-button" to="/admin">
             Go to Admin
           </Link>
+        </div>
+      )}
+
+      {activePhoto && selectedAlbum && (
+        <div className="photo-lightbox" role="dialog" aria-modal="true" aria-label={activePhoto.title}>
+          <button
+            type="button"
+            className="lightbox-close"
+            aria-label="Close photo viewer"
+            onClick={closeAlbum}
+          >
+            <X size={22} aria-hidden="true" />
+          </button>
+          {selectedAlbum.photos.length > 1 && (
+            <button
+              type="button"
+              className="lightbox-nav lightbox-prev"
+              aria-label="Previous photo"
+              onClick={() => movePhoto(-1)}
+            >
+              <ChevronLeft size={24} aria-hidden="true" />
+            </button>
+          )}
+          <figure>
+            <img src={activePhoto.src} alt={activePhoto.title} />
+            <figcaption>
+              <strong>{activePhoto.title}</strong>
+              <span>{activePhoto.caption}</span>
+            </figcaption>
+          </figure>
+          {selectedAlbum.photos.length > 1 && (
+            <button
+              type="button"
+              className="lightbox-nav lightbox-next"
+              aria-label="Next photo"
+              onClick={() => movePhoto(1)}
+            >
+              <ChevronRight size={24} aria-hidden="true" />
+            </button>
+          )}
         </div>
       )}
     </section>
@@ -620,7 +1192,7 @@ function AboutPage({ facultyMembers }) {
             <h2>Serving Jagalbet Families</h2>
             <p>
               The school serves children from Jagalbet and nearby areas of
-              Joida Taluk, Uttara Kannada. It supports primary learning through
+              Joida Taluka, Uttara Kannada. It supports primary learning through
               classroom teaching, co-curricular participation, parent
               communication, and government student welfare programs.
             </p>
@@ -785,7 +1357,10 @@ function FacilitiesPage() {
 }
 
 function ActivitiesPage({ events, photos }) {
-  const latestPhotos = photos.slice(0, 6)
+  const galleryAlbumCards = useMemo(
+    () => buildGalleryAlbums(photos).filter((album) => album.photos.length > 0).slice(0, 6),
+    [photos],
+  )
 
   return (
     <section className="section-block section-page content-section">
@@ -819,19 +1394,20 @@ function ActivitiesPage({ events, photos }) {
           <p className="eyebrow">Photo & Video Gallery</p>
           <h2>Campus Activities And Student Work</h2>
           <p>
-            Gallery photos uploaded by the school admin are shown here. Video
-            links can be added as event details when required.
+            Selected gallery albums are shown here. Open any card to view the
+            full set of photos for that activity.
           </p>
         </div>
-        <div className="gallery-grid">
-          {latestPhotos.map((photo) => (
-            <article className="gallery-card" key={photo.id}>
-              <img src={photo.src} alt={photo.title} />
-              <div>
-                <h3>{photo.title}</h3>
-                <p>{photo.caption}</p>
-              </div>
-            </article>
+        <div className="album-grid">
+          {galleryAlbumCards.map((album) => (
+            <Link className="album-card" key={album.id} to={`/gallery?album=${album.id}`}>
+              <img src={album.photos[0].src} alt="" aria-hidden="true" />
+              <span className="album-card-body">
+                <strong>{album.title}</strong>
+                <span>{album.description}</span>
+                <small>{album.photos.length} photos</small>
+              </span>
+            </Link>
           ))}
         </div>
       </section>
@@ -1087,11 +1663,15 @@ function AdminPage({
 
     const title = formData.get('title').trim() || 'School Photo'
     const caption = formData.get('caption').trim() || 'Uploaded from the school admin panel.'
+    const albumId = formData.get('albumId') || DEFAULT_PHOTO_ALBUM_ID
+    const album = getAlbumById(albumId)
     const uploadedPhotos = await Promise.all(
       files.map(async (file, index) => ({
         id: `photo-${Date.now()}-${index}`,
         title: files.length === 1 ? title : `${title} ${index + 1}`,
         caption,
+        albumId,
+        albumTitle: album.title,
         src: await readFileAsDataUrl(file),
       })),
     )
@@ -1207,6 +1787,16 @@ function AdminPage({
             <textarea name="caption" rows="3" placeholder="Write a short caption" />
           </label>
           <label>
+            Photo Album
+            <select name="albumId" defaultValue={ANNUAL_DAY_ALBUM_ID}>
+              {photoAlbums.map((album) => (
+                <option key={album.id} value={album.id}>
+                  {album.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
             Choose Photos
             <input name="photos" type="file" accept="image/*" multiple required />
           </label>
@@ -1279,6 +1869,7 @@ function AdminPage({
                   <img src={photo.src} alt={photo.title} />
                   <div className="manage-photo-body">
                     <strong>{photo.title}</strong>
+                    <span>{photo.albumTitle || getAlbumById(photo.albumId).title}</span>
                     <button type="button" onClick={() => onDeletePhoto(photo.id)}>
                       <Trash2 size={17} aria-hidden="true" />
                       Remove
@@ -1315,7 +1906,7 @@ function App() {
   const [isAdmin, setIsAdmin] = useState(() => localStorage.getItem(ADMIN_STORAGE_KEY) === 'true')
   const [isLoading, setIsLoading] = useState(true)
   const allEvents = useMemo(() => [...uploadedEvents, ...defaultEvents], [uploadedEvents])
-  const allPhotos = useMemo(() => [...photos, ...defaultPhotos], [photos])
+  const allPhotos = useMemo(() => [...photos, ...galleryAssetPhotos, ...defaultPhotos], [photos])
   const allFaculty = useMemo(() => [...uploadedFaculty, ...defaultFaculty], [uploadedFaculty])
 
   useEffect(() => {
