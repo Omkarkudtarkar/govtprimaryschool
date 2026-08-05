@@ -1,5 +1,7 @@
 # Higher Primary School Jagalbet
 
+# govtprimaryschool
+
 React website for Higher Primary School Jagalbet with sections for faculty,
 events, gallery, about us, contact information, and a simple admin upload page.
 
